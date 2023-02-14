@@ -42,7 +42,8 @@ func main() {
 	}
 
 	// Print the token claims
-	if claims, ok := parsedToken.Claims.(jwt.MapClaims); ok && parsedToken.Valid {
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	if ok && parsedToken.Valid {
 		fmt.Println("Username:", claims["username"])
 		fmt.Println("Expiration Time:", time.Unix(int64(claims["exp"].(float64)), 0))
 	} else {
