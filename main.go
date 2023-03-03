@@ -7,9 +7,28 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
+var signingAlgorithm string = jwt.SigningMethodHS256.Alg()
+
+const (
+    usernameKey      = "username"
+    expirationKey    = "exp"
+)
+
+
 func main() {
 	// Set the signing key
 	signingKey := []byte("my-secret-key")
+
+	tokenString, err := createToken(signingKey, "johndoe", time.Now().Add(time.Hour * 24))
+
+	claims, err := verifyToken(tokenString, signingKey)
+	if err != nil {
+	fmt.Println("Error verifying token:", err)
+	return
+	}
+	fmt.Println("Username:", claims[usernameKey])
+	fmt.Println("Expiration Time:", time.Unix(int64(claims[expirationKey].(float64)), 0))
+
 
 	// Create a new token with a claims payload
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -50,3 +69,30 @@ func main() {
 		fmt.Println("Invalid token")
 	}
 }
+
+func createToken(signingKey []byte, username string, expiration time.Time) (string, error) {
+	token := jwt.NewWithClaims(jwt.GetSigningMethod(signingAlgorithm), jwt.MapClaims{
+		usernameKey: username,
+		expirationKey: expiration.Unix(),
+	})
+	return token.SignedString(signingKey)
+}
+
+func verifyToken(tokenString string, signingKey []byte) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return signingKey, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims, nil
+	} else {
+		return nil, fmt.Errorf("invalid token")
+	}
+}
+
+
